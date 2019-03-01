@@ -5,7 +5,7 @@ import codecs
 from collections import defaultdict, OrderedDict
 import copy
 import glob
-from le_utils.constants import licenses, content_kinds, file_formats
+from le_utils.constants import licenses, content_kinds, file_formats, roles
 import hashlib
 import json
 import logging
@@ -136,12 +136,13 @@ def remove_special_case(title):
 
 
 class Node(object):
-    def __init__(self, title, source_id, lang="en"):
+    def __init__(self, title, source_id, lang="en", role=None):
         self.title = title
         self.source_id = source_id
         self.tree_nodes = OrderedDict()
         self.lang = lang
         self.description = None
+        self.role = role
 
     def add_node(self, obj):
         node = obj.to_node()
@@ -157,6 +158,7 @@ class Node(object):
             language=self.lang,
             author=AUTHOR,
             license=LICENSE,
+            role=self.role,
             children=list(self.tree_nodes.values())
         )
     
@@ -170,7 +172,7 @@ class Subject(Node):
         with open(filename, "r") as f:
             topics = json.load(f)
             for topic in topics:
-                topic_obj = Topic(topic["title"], topic["source_id"], lang=CHANNEL_LANGUAGE)
+                topic_obj = Topic(topic["title"], topic["source_id"], lang=CHANNEL_LANGUAGE, role=self.role)
                 for unit in topic["units"]:
                     units = Topic.auto_generate_units(unit["source_id"], 
                         title=unit["title"], lang=unit["lang"], 
@@ -186,7 +188,7 @@ class Topic(Node):
 
     @staticmethod
     def auto_generate_units(url, title=None, lang="en", auto_parse=False, only_folder_name=None):
-        youtube = YouTubeResource(url)
+        youtube = YouTubeResource(url, role=self.role)
         units = defaultdict(list)
         if title is not None:
             if only_folder_name is not None:
@@ -209,7 +211,7 @@ class Topic(Node):
 
         units = sorted(units.items(), key=lambda x: x[1][0], reverse=False)
         for title, urls in units:
-            unit = Unit(title, title, lang=lang)
+            unit = Unit(title, title, lang=lang, role=self.role)
             unit.urls = [url for _, url in urls]
             yield unit
 
@@ -239,13 +241,14 @@ class Unit(Node):
                 language=self.lang,
                 author=AUTHOR,
                 license=LICENSE,
-                children=children
+                children=children,
+                role=self.roles
             )
 
 
 class YouTubeResource(object):
     def __init__(self, source_id, name=None, type_name="Youtube", lang="ar", 
-            embeded=False, section_title=None):
+            embeded=False, section_title=None, role=None):
         LOGGER.info("    + Resource Type: {}".format(type_name))
         LOGGER.info("    - URL: {}".format(source_id))
         self.filename = None
@@ -253,6 +256,7 @@ class YouTubeResource(object):
         self.filepath = None
         self.name = name
         self.section_title = section_title
+        self.role = roles
         if embeded is True:
             self.source_id = YouTubeResource.transform_embed(source_id)
         else:
@@ -412,7 +416,8 @@ class YouTubeResource(object):
                 author=AUTHOR,
                 files=files,
                 language=self.lang,
-                license=LICENSE
+                license=LICENSE,
+                role=self.role
             )
             return node
 
@@ -486,15 +491,18 @@ class KingKhaledChef(JsonTreeChef):
             )
 
         subject_sedu = Subject(title="التربية الخاصة Special Education", 
-                            source_id="التربية الخاصة Special Education")
+                            source_id="التربية الخاصة Special Education",
+                            role=roles.COACH)
         subject_sedu.load("resources_ar_special_education.json", auto_parse=True)
 
         subject_about_edu = Subject(title="في التربية والتعليم About Education and Schooling",
-                                source_id="في التربية والتعليم About Education and Schooling")
+                                source_id="في التربية والتعليم About Education and Schooling",
+                                role=roles.COACH)
         subject_about_edu.load("resources_ar_about_education.json", auto_parse=True)
 
         subject_teaching = Subject(title="مناهج وتدريس Teaching and Curriculum",
-                                source_id="مناهج وتدريس Teaching and Curriculum")
+                                source_id="مناهج وتدريس Teaching and Curriculum",
+                                role=roles.COACH)
         subject_teaching.load("resources_ar_teaching.json", auto_parse=True)
         subjects = [subject_sedu, subject_about_edu, subject_teaching]
         return channel_tree, subjects
