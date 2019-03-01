@@ -174,7 +174,7 @@ class Subject(Node):
             for topic in topics:
                 topic_obj = Topic(topic["title"], topic["source_id"], lang=CHANNEL_LANGUAGE, role=self.role)
                 for unit in topic["units"]:
-                    units = Topic.auto_generate_units(unit["source_id"], 
+                    units = topic_obj.auto_generate_units(unit["source_id"], 
                         title=unit["title"], lang=unit["lang"], 
                         auto_parse=auto_parse, only_folder_name=unit.get("only", None))
                     topic_obj.units.extend(units)
@@ -186,8 +186,8 @@ class Topic(Node):
         super(Topic, self).__init__(*args, **kwargs)
         self.units = []
 
-    @staticmethod
-    def auto_generate_units(url, title=None, lang="en", auto_parse=False, only_folder_name=None):
+    #@staticmethod
+    def auto_generate_units(self, url, title=None, lang="en", auto_parse=False, only_folder_name=None):
         youtube = YouTubeResource(url, role=self.role)
         units = defaultdict(list)
         if title is not None:
@@ -242,7 +242,7 @@ class Unit(Node):
                 author=AUTHOR,
                 license=LICENSE,
                 children=children,
-                role=self.roles
+                role=self.role
             )
 
 
@@ -526,6 +526,8 @@ class KingKhaledChef(JsonTreeChef):
             channel_tree, subjects = self.k12_lessons()
         elif intermedian_lessons == 1:
             channel_tree, subjects = self.intermediate_lessons()
+        else:
+            channel_tree, subjects = self.k12_lessons()
 
         base_path = [DATA_DIR] + ["King Khaled University in Abha"]
         base_path = build_path(base_path)
