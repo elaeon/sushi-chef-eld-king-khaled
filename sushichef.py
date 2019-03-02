@@ -121,12 +121,15 @@ def title_patterns(title):
 
 
 def remove_units_number(title):
-    match = re.search(r'\|.*\|', title)
-    if match:
-        index = match.span()
-        new_title = "{} | {}".format(title[:index[0]].strip(), title[index[1]:].strip())
-        return new_title.strip()
-    return title
+    if isinstance(title, str):
+        match = re.search(r'\|.*\|', title)
+        if match:
+            index = match.span()
+            new_title = "{} | {}".format(title[:index[0]].strip(), title[index[1]:].strip())
+            return new_title.strip()
+        return title
+    else:
+        return "No file"
 
 
 def remove_special_case(title):
@@ -186,7 +189,6 @@ class Topic(Node):
         super(Topic, self).__init__(*args, **kwargs)
         self.units = []
 
-    #@staticmethod
     def auto_generate_units(self, url, title=None, lang="en", auto_parse=False, only_folder_name=None):
         youtube = YouTubeResource(url, role=self.role)
         units = defaultdict(list)
@@ -223,7 +225,7 @@ class Unit(Node):
 
     def download(self, download=True, base_path=None):
         for url in self.urls:
-            youtube = YouTubeResource(url, lang=self.lang)
+            youtube = YouTubeResource(url, lang=self.lang, role=self.role)
             youtube.download(download, base_path)
             youtube.title = remove_special_case(remove_units_number(youtube.title))
             self.add_node(youtube)
@@ -256,7 +258,7 @@ class YouTubeResource(object):
         self.filepath = None
         self.name = name
         self.section_title = section_title
-        self.role = roles
+        self.role = role
         if embeded is True:
             self.source_id = YouTubeResource.transform_embed(source_id)
         else:
@@ -405,6 +407,8 @@ class YouTubeResource(object):
                 return
 
     def to_node(self):
+        if self.role is None:
+            raise Exception
         if self.filepath is not None:
             files = [dict(file_type=content_kinds.VIDEO, path=self.filepath)]
             files += self.subtitles_dict()
@@ -454,19 +458,23 @@ class KingKhaledChef(JsonTreeChef):
                 license=LICENSE,
             )
         subject_en = Subject(title="English Language Skills اللغة الإنجليزية", 
-                            source_id="English Language Skills اللغة الإنجليزية")
+                            source_id="English Language Skills اللغة الإنجليزية",
+                            role=roles.LEARNER)
         subject_en.load("resources_en_lang_skills.json")
 
         subject_ar = Subject(title="Arabic Language Skills اللغة العربية", 
-                            source_id="Arabic Language Skills اللغة الإنجليزية")
+                            source_id="Arabic Language Skills اللغة الإنجليزية",
+                            role=roles.LEARNER)
         subject_ar.load("resources_ar_lang_skills.json")
 
         subject_ar_st = Subject(title="Islamic Studies الثقافة الإسلامية", 
-                            source_id="Islamic Studies الثقافة الإسلامية")
+                            source_id="Islamic Studies الثقافة الإسلامية",
+                            role=roles.LEARNER)
         subject_ar_st.load("resources_ar_islamic_studies.json")
 
         subject_ar_math = Subject(title="Math الرياضيات", 
-                            source_id="Math الرياضيات")
+                            source_id="Math الرياضيات",
+                            role=roles.LEARNER)
         subject_ar_math.load("resources_ar_math.json")
 
         subjects = [subject_en, subject_ar, subject_ar_st, subject_ar_math]
